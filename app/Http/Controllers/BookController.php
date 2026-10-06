@@ -5,17 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Book;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class BookController extends Controller
 {
     /**
-     * READ — Daftar buku + pencarian + filter kategori (bonus).
+     * READ — Daftar buku + pencarian + filter kategori.
      */
     public function index(Request $request)
     {
-        $query = Book::with('category');
+        $query = Book::with(['category', 'reviews']);
 
-        // Bonus: pencarian judul / penulis
+        // Pencarian judul / penulis
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -24,7 +25,7 @@ class BookController extends Controller
             });
         }
 
-        // Bonus: filter kategori
+        // Filter kategori
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
         }
@@ -41,6 +42,7 @@ class BookController extends Controller
     public function create()
     {
         $categories = Category::all();
+
         return view('books.create', compact('categories'));
     }
 
@@ -65,12 +67,24 @@ class BookController extends Controller
     }
 
     /**
-     * DETAIL — tampilkan satu buku.
+     * DETAIL — tampilkan satu buku + review + reply.
      */
     public function show(Book $book)
     {
-        $book->load('category');
-        return view('books.show', compact('book'));
+        // Eager load relasi lengkap
+        $book->load([
+            'category',
+            'reviews.user',
+            'reviews.replies.user',
+        ]);
+
+        // Cek apakah user sekarang sudah memberi review
+        $myReview = null;
+        if (Auth::check()) {
+            $myReview = $book->reviews->firstWhere('user_id', Auth::id());
+        }
+
+        return view('books.show', compact('book', 'myReview'));
     }
 
     /**
@@ -79,6 +93,7 @@ class BookController extends Controller
     public function edit(Book $book)
     {
         $categories = Category::all();
+
         return view('books.edit', compact('book', 'categories'));
     }
 

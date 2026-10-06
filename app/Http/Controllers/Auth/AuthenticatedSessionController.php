@@ -11,26 +11,38 @@ use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
+    /**
+     * Tampilkan halaman login.
+     */
     public function create(): View
     {
         return view('auth.login');
     }
 
+    /**
+     * Proses login user.
+     */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
+
         $request->session()->regenerate();
 
-        // ← UBAH DI SINI: arahkan ke daftar buku
-        return redirect()->intended(route('books.index', absolute: false));
+        // ← UBAH DI SINI: dashboard atau books?
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
+    /**
+     * Logout user & redirect ke halaman login.
+     */
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
+
         $request->session()->invalidate();
+
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect()->route('login')->with('status', 'Anda berhasil logout.');
     }
 }

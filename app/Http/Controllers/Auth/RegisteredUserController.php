@@ -10,24 +10,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
 {
-    /**
-     * Display the registration view.
-     */
     public function create(): View
     {
         return view('auth.register');
     }
 
-    /**
-     * Handle an incoming registration request.
-     *
-     * @throws ValidationException
-     */
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
@@ -40,13 +31,16 @@ class RegisteredUserController extends Controller
             'name'     => $request->name,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
+            'role'     => 'user',
         ]);
 
         event(new Registered($user));
 
-        Auth::login($user);
+        // ← KOMENTARI baris ini kalau tidak mau auto-login
+        // Auth::login($user);
 
-        // ← UBAH DI SINI: arahkan ke daftar buku
-        return redirect(route('books.index', absolute: false));
+        // ← REDIRECT ke halaman login dengan pesan sukses
+        return redirect()->route('login')
+            ->with('status', 'Registrasi berhasil! Silakan login dengan akun Anda.');
     }
 }
