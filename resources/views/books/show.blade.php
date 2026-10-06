@@ -159,7 +159,7 @@
                 </div>
             </div>
 
-            {{-- SECTION REVIEW --}}
+            {{-- ===================== SECTION REVIEW ===================== --}}
             <div class="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
                 <div class="px-6 sm:px-8 py-5 border-b border-gray-100 flex items-center justify-between">
@@ -190,9 +190,11 @@
 
                 <div class="p-6 sm:p-8">
 
+                    {{-- FORM REVIEW USER BIASA --}}
                     @if(!auth()->user()->isAdmin())
                     <div x-data="{ editing: {{ $myReview ? 'false' : 'true' }} }" class="mb-8">
 
+                        {{-- SUDAH REVIEW --}}
                         @if($myReview)
                         <div x-show="!editing" class="p-5 bg-indigo-50 border border-indigo-100 rounded-xl">
                             <div class="flex items-start justify-between gap-3">
@@ -219,6 +221,88 @@
                                         @if($myReview->comment)
                                         <p class="mt-2 text-sm text-gray-700 leading-relaxed">{{ $myReview->comment }}</p>
                                         @endif
+
+                                        {{-- ============ AREA BALASAN UNTUK REVIEW SENDIRI ============ --}}
+                                        <div x-data="{ open: false }" class="mt-3">
+
+                                            <div class="flex items-center gap-4">
+                                                <button type="button" @click="open = !open"
+                                                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                                    </svg>
+                                                    <span x-text="open ? 'Batal' : 'Balas'"></span>
+                                                    @if($myReview->replies->count() > 0)
+                                                    <span class="text-gray-400 font-normal">({{ $myReview->replies->count() }})</span>
+                                                    @endif
+                                                </button>
+                                            </div>
+
+                                            <form x-show="open" x-transition
+                                                action="{{ route('replies.store', $myReview) }}"
+                                                method="POST" class="mt-3 flex items-start gap-2">
+                                                @csrf
+                                                <div class="w-7 h-7 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-xs">
+                                                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                                                </div>
+                                                <div class="flex-1">
+                                                    <textarea name="body" rows="2" required placeholder="Tulis balasan Anda..."
+                                                        class="w-full border border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition text-xs p-2.5 resize-none"></textarea>
+                                                    <div class="mt-1.5 flex items-center gap-2">
+                                                        <button type="submit"
+                                                            class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+                                                            Kirim Balasan
+                                                        </button>
+                                                        <button type="button" @click="open = false"
+                                                            class="text-xs text-gray-500 hover:text-gray-700 transition">
+                                                            Batal
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
+
+                                            @if($myReview->replies->count() > 0)
+                                            <div class="mt-3 pl-4 border-l-2 border-indigo-200 space-y-2">
+                                                @foreach($myReview->replies as $reply)
+                                                @php $isMyReply = auth()->id() === $reply->user_id; @endphp
+                                                <div class="flex items-start gap-2 group">
+                                                    <div class="w-7 h-7 bg-white rounded-full flex items-center justify-center text-gray-700 font-bold flex-shrink-0 text-xs border border-indigo-100">
+                                                        {{ strtoupper(substr($reply->user->name ?? '?', 0, 1)) }}
+                                                    </div>
+                                                    <div class="flex-1 min-w-0 bg-white/70 rounded-lg px-3 py-2">
+                                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                                            <span class="font-semibold text-xs text-gray-800">{{ $reply->user->name ?? 'User' }}</span>
+                                                            @if($reply->user && $reply->user->isAdmin())
+                                                            <span class="text-[9px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded">ADMIN</span>
+                                                            @endif
+                                                            @if($isMyReply)
+                                                            <span class="text-[9px] font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">ANDA</span>
+                                                            @endif
+                                                            <span class="text-[10px] text-gray-400">· {{ $reply->created_at->diffForHumans() }}</span>
+                                                        </div>
+                                                        <p class="text-xs text-gray-700 mt-0.5 leading-relaxed">{{ $reply->body }}</p>
+                                                    </div>
+
+                                                    @if($isMyReply || auth()->user()->isAdmin())
+                                                    <form action="{{ route('replies.destroy', $reply) }}" method="POST"
+                                                        onsubmit="return confirm('Hapus balasan ini?')"
+                                                        class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition">
+                                                        @csrf @method('DELETE')
+                                                        <button class="text-red-400 hover:text-red-600 p-1 rounded transition" title="Hapus">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                    @endif
+                                                </div>
+                                                @endforeach
+                                            </div>
+                                            @endif
+
+                                        </div>
+                                        {{-- ============ END AREA BALASAN ============ --}}
+
                                     </div>
                                 </div>
 
@@ -243,6 +327,7 @@
                         </div>
                         @endif
 
+                        {{-- FORM --}}
                         <div x-show="editing" x-transition class="p-5 bg-indigo-50 border border-indigo-100 rounded-xl">
                             <h4 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -301,6 +386,7 @@
                     </div>
                     @endif
 
+                    {{-- DAFTAR REVIEW --}}
                     @php
                     $otherReviews = $book->reviews
                     ->when(auth()->check(), fn($c) => $c->where('user_id', '!=', auth()->id()))
@@ -340,8 +426,10 @@
                                     <p class="mt-2 text-sm text-gray-700 leading-relaxed">{{ $review->comment }}</p>
                                     @endif
 
-                                    <div class="mt-3 flex items-center gap-4">
-                                        <div x-data="{ open: false }" class="inline">
+                                    {{-- ============ AREA BALASAN ============ --}}
+                                    <div x-data="{ open: false }" class="mt-3">
+
+                                        <div class="flex items-center gap-4">
                                             <button type="button" @click="open = !open"
                                                 class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -353,51 +441,10 @@
                                                 @endif
                                             </button>
                                         </div>
-                                    </div>
 
-                                    @if($review->replies->count() > 0)
-                                    <div class="mt-3 pl-4 border-l-2 border-indigo-100 space-y-2">
-                                        @foreach($review->replies as $reply)
-                                        @php $isMyReply = auth()->id() === $reply->user_id; @endphp
-                                        <div class="flex items-start gap-2 group">
-                                            <div class="w-7 h-7 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 font-bold flex-shrink-0 text-xs">
-                                                {{ strtoupper(substr($reply->user->name ?? '?', 0, 1)) }}
-                                            </div>
-                                            <div class="flex-1 min-w-0 bg-gray-50 rounded-lg px-3 py-2">
-                                                <div class="flex items-center gap-1.5 flex-wrap">
-                                                    <span class="font-semibold text-xs text-gray-800">{{ $reply->user->name ?? 'User' }}</span>
-                                                    @if($reply->user && $reply->user->isAdmin())
-                                                    <span class="text-[9px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded">ADMIN</span>
-                                                    @endif
-                                                    @if($isMyReply)
-                                                    <span class="text-[9px] font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">ANDA</span>
-                                                    @endif
-                                                    <span class="text-[10px] text-gray-400">· {{ $reply->created_at->diffForHumans() }}</span>
-                                                </div>
-                                                <p class="text-xs text-gray-700 mt-0.5 leading-relaxed">{{ $reply->body }}</p>
-                                            </div>
-
-                                            @if($isMyReply || auth()->user()->isAdmin())
-                                            <form action="{{ route('replies.destroy', $reply) }}" method="POST"
-                                                onsubmit="return confirm('Hapus balasan ini?')"
-                                                class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition">
-                                                @csrf @method('DELETE')
-                                                <button class="text-red-400 hover:text-red-600 p-1 rounded transition" title="Hapus">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                </button>
-                                            </form>
-                                            @endif
-                                        </div>
-                                        @endforeach
-                                    </div>
-                                    @endif
-
-                                    <div x-data="{ open: false }" class="mt-3">
                                         <form x-show="open" x-transition
                                             action="{{ route('replies.store', $review) }}"
-                                            method="POST" class="flex items-start gap-2">
+                                            method="POST" class="mt-3 flex items-start gap-2">
                                             @csrf
                                             <div class="w-7 h-7 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-xs">
                                                 {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
@@ -405,15 +452,60 @@
                                             <div class="flex-1">
                                                 <textarea name="body" rows="2" required placeholder="Tulis balasan Anda..."
                                                     class="w-full border border-gray-200 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition text-xs p-2.5 resize-none"></textarea>
-                                                <div class="mt-1.5">
+                                                <div class="mt-1.5 flex items-center gap-2">
                                                     <button type="submit"
                                                         class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">
                                                         Kirim Balasan
                                                     </button>
+                                                    <button type="button" @click="open = false"
+                                                        class="text-xs text-gray-500 hover:text-gray-700 transition">
+                                                        Batal
+                                                    </button>
                                                 </div>
                                             </div>
                                         </form>
+
+                                        @if($review->replies->count() > 0)
+                                        <div class="mt-3 pl-4 border-l-2 border-indigo-100 space-y-2">
+                                            @foreach($review->replies as $reply)
+                                            @php $isMyReply = auth()->id() === $reply->user_id; @endphp
+                                            <div class="flex items-start gap-2 group">
+                                                <div class="w-7 h-7 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 font-bold flex-shrink-0 text-xs">
+                                                    {{ strtoupper(substr($reply->user->name ?? '?', 0, 1)) }}
+                                                </div>
+                                                <div class="flex-1 min-w-0 bg-gray-50 rounded-lg px-3 py-2">
+                                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                                        <span class="font-semibold text-xs text-gray-800">{{ $reply->user->name ?? 'User' }}</span>
+                                                        @if($reply->user && $reply->user->isAdmin())
+                                                        <span class="text-[9px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded">ADMIN</span>
+                                                        @endif
+                                                        @if($isMyReply)
+                                                        <span class="text-[9px] font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">ANDA</span>
+                                                        @endif
+                                                        <span class="text-[10px] text-gray-400">· {{ $reply->created_at->diffForHumans() }}</span>
+                                                    </div>
+                                                    <p class="text-xs text-gray-700 mt-0.5 leading-relaxed">{{ $reply->body }}</p>
+                                                </div>
+
+                                                @if($isMyReply || auth()->user()->isAdmin())
+                                                <form action="{{ route('replies.destroy', $reply) }}" method="POST"
+                                                    onsubmit="return confirm('Hapus balasan ini?')"
+                                                    class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition">
+                                                    @csrf @method('DELETE')
+                                                    <button class="text-red-400 hover:text-red-600 p-1 rounded transition" title="Hapus">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                </form>
+                                                @endif
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                        @endif
+
                                     </div>
+                                    {{-- ============ END AREA BALASAN ============ --}}
 
                                 </div>
 
